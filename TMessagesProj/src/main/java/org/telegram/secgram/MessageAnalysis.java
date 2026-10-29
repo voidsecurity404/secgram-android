@@ -147,6 +147,57 @@ public final class MessageAnalysis {
             }
         }
 
+        // Inline bot buttons hide where they lead: show it.
+        if (message.reply_markup instanceof TLRPC.TL_replyInlineMarkup) {
+            int index = 0;
+            for (org.telegram.tgnet.tl.TL_keyboard.KeyboardInlineButtonRow row : ((TLRPC.TL_replyInlineMarkup) message.reply_markup).rows) {
+                for (org.telegram.tgnet.tl.TL_keyboard.KeyboardInlineButton button : row.buttons) {
+                    ++index;
+                    final org.telegram.tgnet.tl.TL_keyboard.InlineButtonType type = button.type;
+                    String kind = null;
+                    String target = null;
+                    if (type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrl) {
+                        kind = "ссылка";
+                        target = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrl) type).url;
+                    } else if (type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrlAuth) {
+                        kind = "вход через Telegram";
+                        target = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeUrlAuth) type).url;
+                    } else if (type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeWebView) {
+                        kind = "мини-приложение";
+                        target = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeWebView) type).url;
+                    } else if (type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeCallback) {
+                        final byte[] data = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeCallback) type).data;
+                        kind = "callback";
+                        target = data == null ? "" : new String(data, java.nio.charset.StandardCharsets.UTF_8);
+                    } else if (type instanceof org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeCopy) {
+                        kind = "копирует текст";
+                        target = ((org.telegram.tgnet.tl.TL_keyboard.TL_inlineButtonTypeCopy) type).copy_text;
+                    }
+                    if (kind == null) {
+                        continue;
+                    }
+                    text.append("Кнопка ").append(index).append(": «").append(button.text).append("» — ").append(kind);
+                    if (target != null && !target.isEmpty()) {
+                        text.append(": ").append(target.length() > 300 ? target.substring(0, 300) : target);
+                        if (target.contains("://")) {
+                            text.append("  ").append(UrlAnalyzer.analyze(target).verdict());
+                        }
+                    }
+                    text.append('\n');
+                }
+            }
+        }
+        if (object.getDocument() != null) {
+            for (TLRPC.DocumentAttribute attribute : object.getDocument().attributes) {
+                // Since 2021 a sticker set id keeps its creator id in the high bits.
+                if (attribute instanceof TLRPC.TL_documentAttributeSticker
+                    && attribute.stickerset instanceof TLRPC.TL_inputStickerSetID
+                    && (attribute.stickerset.id >>> 32) != 0) {
+                    text.append("Создатель набора стикеров: вероятно, пользователь ID ").append(attribute.stickerset.id >>> 32).append('\n');
+                }
+            }
+        }
+
         final TLRPC.User sender = fromId > 0 ? controller.getUser(fromId) : null;
         final boolean stranger = sender != null && !sender.contact && !sender.self && !sender.bot && dialogId > 0;
         final Finding.Report risk = senderRisk(sender, fromId);
@@ -209,7 +260,9 @@ public final class MessageAnalysis {
         }
 
         final java.io.File local = org.telegram.messenger.FileLoader.getInstance(account).getPathToMessage(message);
-        if (object.getDocument() != null && local != null && local.exists() && local.length() <= 64L * 1024 * 1024) {
+        // Only containers, and not huge ones: this runs on the UI thread.
+        if (object.getDocument() != null && local != null && local.exists() && local.length() <= 16L * 1024 * 1024
+            && FileGuard.isContainer(FileGuard.readHead(local))) {
             try (java.io.InputStream in = new java.io.FileInputStream(local)) {
                 final byte[] data = new byte[(int) local.length()];
                 int read = 0;
