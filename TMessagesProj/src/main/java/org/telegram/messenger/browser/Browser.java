@@ -296,6 +296,14 @@ public class Browser {
         if (context == null || uri == null) {
             return;
         }
+        {
+            // SecGram: analyze external links before opening them.
+            final boolean secgramAllowCustom = _allowCustom;
+            final boolean secgramTryTelegraph = tryTelegraph;
+            if (org.telegram.secgram.LinkGuard.intercept(context, uri, target -> openUrl(context, target, secgramAllowCustom, secgramTryTelegraph, forceNotInternalForApps, inCaseLoading, browser, allowIntent, allowInAppBrowser, forceRequest))) {
+                return;
+            }
+        }
         final int currentAccount = UserConfig.selectedAccount;
         boolean[] forceBrowser = new boolean[]{false};
         boolean internalUri = isInternalUri(uri, forceBrowser);

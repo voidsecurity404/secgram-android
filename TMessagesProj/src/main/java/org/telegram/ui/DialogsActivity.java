@@ -13808,6 +13808,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             }
         }
+        io.add(R.drawable.msg_permissions, "Безопасность SecGram", () -> {
+            org.telegram.secgram.SecGramSettings.show(getParentActivity());
+        });
         if (getUserConfig().showCallsTab) {
             io.add(R.drawable.msg_settings_old, getString(R.string.Settings), () -> {
                 presentFragment(new SettingsActivity());
