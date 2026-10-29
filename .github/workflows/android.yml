@@ -65,7 +65,9 @@ jobs:
           if [ "$VARIANT" = "Release" ]; then
             SIGNING="-PRELEASE_KEY_ALIAS=secgram -PRELEASE_KEY_PASSWORD=$KEYSTORE_PASSWORD -PRELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD"
           fi
-          ./gradlew --no-daemon -Dorg.gradle.jvmargs=-Xmx6g \
+          VERSION_ARG=""
+          case "$GITHUB_REF_NAME" in v[0-9]*) VERSION_ARG="-PSECGRAM_VERSION=${GITHUB_REF_NAME#v}";; esac
+          ./gradlew --no-daemon -Dorg.gradle.jvmargs=-Xmx6g $VERSION_ARG \
             :TMessagesProj_App:assembleAfat$VARIANT \
             -PSECGRAM_APP_ID="${API_ID:-0}" \
             -PSECGRAM_APP_HASH="$API_HASH" \

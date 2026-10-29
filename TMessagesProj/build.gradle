@@ -140,6 +140,7 @@ android {
 
         // SecGram: own api_id / api_hash, passed as -PSECGRAM_APP_ID=...
         buildConfigField "int", "SECGRAM_APP_ID", (project.findProperty("SECGRAM_APP_ID") ?: "0").toString()
+        buildConfigField "String", "SECGRAM_VERSION", "\"" + SECGRAM_VERSION + "\""
         buildConfigField "String", "SECGRAM_APP_HASH", "\"" + (project.findProperty("SECGRAM_APP_HASH") ?: "") + "\""
 
         vectorDrawables.generatedDensities = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi']

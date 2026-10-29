@@ -212,9 +212,23 @@ public final class FileGuard {
         return result;
     }
 
+    // Runs an action that opens a file SecGram itself trusts (its update).
+    public static void runTrusted(Runnable action) {
+        bypass = true;
+        try {
+            action.run();
+        } finally {
+            bypass = false;
+        }
+    }
+
     // Returns true if the opening was taken over by a warning.
     public static boolean intercept(Activity activity, File file, String fileName, Runnable open) {
         if (bypass || activity == null || file == null || !SecGramConfig.get(SecGramConfig.FILE_GUARD)) {
+            return false;
+        }
+        // SecGram's own update, already checked to be signed with our key.
+        if (file.getAbsolutePath().contains("/secgram_update/")) {
             return false;
         }
         final String name = fileName != null ? fileName : file.getName();

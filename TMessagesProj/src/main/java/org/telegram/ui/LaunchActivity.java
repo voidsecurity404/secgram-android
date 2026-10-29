@@ -397,6 +397,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         org.telegram.secgram.SecGramWatcher.start();
+        AndroidUtilities.runOnUIThread(() -> org.telegram.secgram.SecGramUpdater.checkAutomatically(this), 5000);
         isActive = true;
         activeInstanceCount++;
         if (BuildVars.DEBUG_VERSION) {
