@@ -22,6 +22,8 @@ public final class SecGramConfig {
     public static final String GHOST_STORIES = "ghost_stories";
     public static final String KEEP_DELETED = "keep_deleted";
     public static final String KEEP_EDITS = "keep_edits";
+    public static final String FILE_GUARD = "file_guard";
+    public static final String STRIP_METADATA = "strip_metadata";
 
     private SecGramConfig() {
     }
@@ -39,6 +41,8 @@ public final class SecGramConfig {
             case SCAM_DETECTOR:
             case KEEP_DELETED:
             case KEEP_EDITS:
+            case FILE_GUARD:
+            case STRIP_METADATA:
                 return true;
             default:
                 return false;
