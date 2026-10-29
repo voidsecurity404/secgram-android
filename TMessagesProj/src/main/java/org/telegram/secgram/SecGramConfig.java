@@ -24,6 +24,8 @@ public final class SecGramConfig {
     public static final String KEEP_EDITS = "keep_edits";
     public static final String FILE_GUARD = "file_guard";
     public static final String STRIP_METADATA = "strip_metadata";
+    public static final String WATCHLIST = "watchlist_enabled";
+    public static final String LOGIN_CODE_GUARD = "login_code_guard";
 
     private SecGramConfig() {
     }
@@ -43,6 +45,8 @@ public final class SecGramConfig {
             case KEEP_EDITS:
             case FILE_GUARD:
             case STRIP_METADATA:
+            case WATCHLIST:
+            case LOGIN_CODE_GUARD:
                 return true;
             default:
                 return false;
