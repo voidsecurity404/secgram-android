@@ -203,9 +203,9 @@ public final class FileGuard {
                 }
             }
             if (!hidden.isEmpty()) {
-                result.add(Finding.Severity.HIGH, "Скрытый код в ресурсах: " + String.join(", ", hidden.subList(0, Math.min(5, hidden.size()))));
+                result.add(Finding.Severity.HIGH, "Скрытый код в ресурсах: " + Finding.join(", ", hidden.subList(0, Math.min(5, hidden.size()))));
             }
-            summary.append("Разрешения (").append(found.size()).append("): ").append(String.join(", ", found));
+            summary.append("Разрешения (").append(found.size()).append("): ").append(Finding.join(", ", found));
         } catch (Exception e) {
             result.add(Finding.Severity.NOTICE, "Не удалось прочитать APK.");
         }
