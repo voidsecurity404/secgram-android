@@ -18854,6 +18854,9 @@ public class MessagesController extends BaseController implements NotificationCe
                 dialogs_read_outbox_max.put(dialogId, Math.max(value, update.max_id));
             } else if (baseUpdate instanceof TL_update.TL_updateDeleteMessages) {
                 TL_update.TL_updateDeleteMessages update = (TL_update.TL_updateDeleteMessages) baseUpdate;
+                if (org.telegram.secgram.SecGramHistory.keepDeleted(currentAccount, 0, update.messages)) {
+                    continue; // SecGram: kept in the chat marked as deleted.
+                }
                 if (deletedMessages == null) {
                     deletedMessages = new LongSparseArray<>();
                 }
@@ -19386,6 +19389,9 @@ public class MessagesController extends BaseController implements NotificationCe
                     deletedMessages = new LongSparseArray<>();
                 }
                 long dialogId = -update.channel_id;
+                if (org.telegram.secgram.SecGramHistory.keepDeleted(currentAccount, dialogId, update.messages)) {
+                    continue; // SecGram: kept in the chat marked as deleted.
+                }
                 ArrayList<Integer> arrayList = deletedMessages.get(dialogId);
                 if (arrayList == null) {
                     arrayList = new ArrayList<>();
@@ -19488,6 +19494,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                     }
                 }
+                org.telegram.secgram.SecGramHistory.applyEdit(currentAccount, message);
                 if (!fromGetDifference) {
                     for (int a = 0, count = message.entities.size(); a < count; a++) {
                         TLRPC.MessageEntity entity = message.entities.get(a);
