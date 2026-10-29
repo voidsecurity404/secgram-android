@@ -220,6 +220,24 @@ public final class FileGuard {
         return result;
     }
 
+    // ZIP (APK, Office), PDF, PE or OLE: worth a full content analysis.
+    public static boolean isContainer(byte[] head) {
+        return head != null && head.length >= 4
+            && ((head[0] == 'P' && head[1] == 'K' && head[2] == 3 && head[3] == 4)
+                || (head[0] == '%' && head[1] == 'P' && head[2] == 'D' && head[3] == 'F')
+                || (head[0] == 'M' && head[1] == 'Z')
+                || ((head[0] & 0xFF) == 0xD0 && (head[1] & 0xFF) == 0xCF && head[2] == 0x11 && (head[3] & 0xFF) == 0xE0));
+    }
+
+    public static byte[] readHead(File file) {
+        final byte[] head = new byte[4];
+        try (InputStream in = new java.io.FileInputStream(file)) {
+            return in.read(head) == 4 ? head : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // Runs an action that opens a file SecGram itself trusts (its update).
     public static void runTrusted(Runnable action) {
         bypass = true;
@@ -243,8 +261,8 @@ public final class FileGuard {
         final Finding.Report report = analyzeName(name);
         final StringBuilder summary = new StringBuilder();
         boolean isApk = name.toLowerCase(Locale.ROOT).endsWith(".apk");
+        final byte[] head = new byte[4];
         try (InputStream in = new java.io.FileInputStream(file)) {
-            final byte[] head = new byte[4];
             if (in.read(head) == 4 && head[0] == 'P' && head[1] == 'K' && head[2] == 3 && head[3] == 4) {
                 try (ZipFile zip = new ZipFile(file)) {
                     if (zip.getEntry("AndroidManifest.xml") != null) {
@@ -262,7 +280,8 @@ public final class FileGuard {
         if (isApk) {
             final Finding.Report apk = analyzeApk(file, summary);
             report.findings.addAll(apk.findings);
-        } else if (file.length() <= 64L * 1024 * 1024) {
+        } else if (isContainer(head) && file.length() <= 64L * 1024 * 1024) {
+            // Only archives, documents and programs are read whole.
             try (InputStream in = new java.io.FileInputStream(file)) {
                 final byte[] data = new byte[(int) file.length()];
                 int read = 0;
