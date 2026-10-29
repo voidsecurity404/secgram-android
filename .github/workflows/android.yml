@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Clone.
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Free up some disk space.
         uses: jlumbroso/free-disk-space@v1.3.1
