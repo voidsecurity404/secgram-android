@@ -33,6 +33,18 @@ public final class Finding {
         this.text = text;
     }
 
+    // String.join needs API 26, SecGram supports API 23.
+    public static String join(String separator, Iterable<String> parts) {
+        final StringBuilder result = new StringBuilder();
+        for (String part : parts) {
+            if (result.length() > 0) {
+                result.append(separator);
+            }
+            result.append(part);
+        }
+        return result.toString();
+    }
+
     public static class Report {
         public final List<Finding> findings = new ArrayList<>();
 

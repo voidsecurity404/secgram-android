@@ -71,7 +71,7 @@ public final class ScamDetector {
             : score >= 4 ? Finding.Severity.HIGH
             : score >= 3 ? Finding.Severity.WARNING
             : Finding.Severity.NOTICE;
-        result.add(severity, "Признаки мошенничества: " + String.join(", ", reasons) + ".");
+        result.add(severity, "Признаки мошенничества: " + Finding.join(", ", reasons) + ".");
         return result;
     }
 }

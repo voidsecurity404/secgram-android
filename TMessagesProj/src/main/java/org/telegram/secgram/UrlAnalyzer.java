@@ -390,10 +390,10 @@ public final class UrlAnalyzer {
             }
         }
         if (!words.isEmpty()) {
-            result.add(words.size() >= 2 ? Finding.Severity.WARNING : Finding.Severity.NOTICE, "Фишинговые слова в адресе: " + String.join(", ", words));
+            result.add(words.size() >= 2 ? Finding.Severity.WARNING : Finding.Severity.NOTICE, "Фишинговые слова в адресе: " + Finding.join(", ", words));
         }
         if (!result.trackingParams.isEmpty()) {
-            result.add(Finding.Severity.INFO, "Параметры слежки: " + String.join(", ", result.trackingParams));
+            result.add(Finding.Severity.INFO, "Параметры слежки: " + Finding.join(", ", result.trackingParams));
         }
         return result;
     }
