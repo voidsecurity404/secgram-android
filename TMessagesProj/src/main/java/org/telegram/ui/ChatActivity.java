@@ -1264,6 +1264,7 @@ public class ChatActivity extends BaseFragment implements
     public final static int OPTION_VIEW_STATISTICS = 115;
     public final static int OPTION_WELCOME_REVERT = 116;
     public final static int OPTION_SEND_MONEY = 117;
+    public final static int OPTION_SECGRAM = 1000;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             NotificationCenter.messagesRead,
@@ -31287,6 +31288,12 @@ public class ChatActivity extends BaseFragment implements
                 icons.add(R.drawable.msg_calendar2);
             }
 
+            if (selectedObject != null && selectedObject.messageOwner != null && selectedObject.getId() > 0) {
+                items.add("SecGram: анализ");
+                options.add(OPTION_SECGRAM);
+                icons.add(R.drawable.msg_permissions);
+            }
+
             if (options.isEmpty() && optionsView == null) {
                 return false;
             }
@@ -33606,6 +33613,10 @@ public class ChatActivity extends BaseFragment implements
         }
         boolean preserveDim = false;
         switch (option) {
+            case OPTION_SECGRAM: {
+                org.telegram.secgram.MessageAnalysis.show(getParentActivity(), currentAccount, selectedObject);
+                break;
+            }
             case OPTION_RETRY: {
                 final MessageObject object = selectedObject;
                 final MessageObject.GroupedMessages group = selectedObjectGroup;

@@ -4278,6 +4278,9 @@ public class AndroidUtilities {
     }
 
     public static boolean openForView(File f, String fileName, String mimeType, final Activity activity, Theme.ResourcesProvider resourcesProvider, boolean restrict) {
+        if (f != null && f.exists() && org.telegram.secgram.FileGuard.intercept(activity, f, fileName, () -> openForView(f, fileName, mimeType, activity, resourcesProvider, restrict))) {
+            return true; // SecGram: shown a dangerous file warning.
+        }
         if (f != null && f.exists()) {
             String realMimeType = null;
             Intent intent = new Intent(Intent.ACTION_VIEW);

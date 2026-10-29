@@ -9434,6 +9434,8 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
                 extension = null;
             }
         }
+        // SecGram: send a copy without GPS and camera metadata.
+        path = org.telegram.secgram.MetadataStripper.stripIfNeeded(path, ApplicationLoader.applicationContext.getCacheDir());
         final File f = new File(path);
         if (!f.exists() || f.length() == 0) {
             return ERROR_TYPE_UNSUPPORTED;
