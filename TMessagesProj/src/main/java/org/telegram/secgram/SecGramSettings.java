@@ -111,6 +111,15 @@ public final class SecGramSettings {
             });
             layout.addView(cell);
         }
+        final org.telegram.ui.Cells.TextSettingsCell update = new org.telegram.ui.Cells.TextSettingsCell(context);
+        update.setTextAndValue("Проверить обновления", "версия " + SecGramUpdater.currentVersion(), true);
+        update.setOnClickListener(v -> {
+            if (context instanceof android.app.Activity) {
+                SecGramUpdater.check((android.app.Activity) context, true);
+            }
+        });
+        layout.addView(update);
+
         final org.telegram.ui.Cells.TextSettingsCell feeds = new org.telegram.ui.Cells.TextSettingsCell(context);
         feeds.setTextAndValue("Обновить базы фишинга", ThreatData.feedsInfo(), true);
         feeds.setOnClickListener(v -> {

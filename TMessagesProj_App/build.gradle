@@ -149,7 +149,11 @@ android {
         }
     }
 
-    defaultConfig.versionCode = Integer.parseInt(APP_VERSION_CODE)
+    // SecGram: the installed version code follows SecGram releases, so every
+    // release updates over the previous one (1.2.3 -> 9203, x10 + abi).
+    def secgramParts = SECGRAM_VERSION.tokenize('.').collect { it.replaceAll('[^0-9]', '') as int }
+    while (secgramParts.size() < 3) { secgramParts.add(0) }
+    defaultConfig.versionCode = 8000 + secgramParts[0] * 1000 + secgramParts[1] * 100 + secgramParts[2]
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
@@ -168,7 +172,7 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 36
-        versionName APP_VERSION_NAME
+        versionName SECGRAM_VERSION + " (Telegram " + APP_VERSION_NAME + ")"
         ndkVersion "27.2.12479018"
 
         multiDexEnabled true
