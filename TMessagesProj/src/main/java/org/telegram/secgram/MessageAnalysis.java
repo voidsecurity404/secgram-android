@@ -181,6 +181,19 @@ public final class MessageAnalysis {
             text.append("\nИндикаторы (обезврежены):\n").append(iocText);
         }
 
+        final StringBuilder decoded = new StringBuilder();
+        for (String token : body.split("\\s+")) {
+            if (token.length() < 12) {
+                continue;
+            }
+            for (String line : Decoder.decode(token)) {
+                decoded.append(token.length() > 24 ? token.substring(0, 24) + "…" : token).append(" → ").append(line).append('\n');
+            }
+        }
+        if (decoded.length() > 0) {
+            text.append("\nДекодирование:\n").append(decoded);
+        }
+
         final String all = text.toString();
         final String iocsOnly = iocText.toString();
         final AlertDialog.Builder builder = new AlertDialog.Builder(activity)

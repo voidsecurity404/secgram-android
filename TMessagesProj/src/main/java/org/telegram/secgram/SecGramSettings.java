@@ -41,6 +41,27 @@ public final class SecGramSettings {
         { SecGramConfig.GHOST_STORIES, "Незаметный просмотр историй", "Автор истории не узнает о просмотре." },
     };
 
+    private static void showDomains(Context context) {
+        final android.widget.EditText field = new android.widget.EditText(context);
+        field.setText(ThreatData.domainListsText());
+        field.setHint("+mycompany.uz\n-evil-phish.top");
+        field.setMinLines(5);
+        field.setGravity(android.view.Gravity.TOP);
+        final LinearLayout box = new LinearLayout(context);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), 0);
+        final android.widget.TextView about = new android.widget.TextView(context);
+        about.setText("По одному домену в строке: «+домен» — доверенный, «-домен» — запрещённый. Поддомены учитываются.");
+        box.addView(about);
+        box.addView(field);
+        new AlertDialog.Builder(context)
+            .setTitle("Свои списки доменов")
+            .setView(box)
+            .setPositiveButton("Сохранить", (d, w) -> ThreatData.setDomainListsText(field.getText().toString()))
+            .setNegativeButton("Отмена", null)
+            .show();
+    }
+
     private static void showWatchlist(Context context) {
         final android.widget.EditText field = new android.widget.EditText(context);
         field.setText(SecGramWatcher.watchlistText());
@@ -90,6 +111,22 @@ public final class SecGramSettings {
             });
             layout.addView(cell);
         }
+        final org.telegram.ui.Cells.TextSettingsCell feeds = new org.telegram.ui.Cells.TextSettingsCell(context);
+        feeds.setTextAndValue("Обновить базы фишинга", ThreatData.feedsInfo(), true);
+        feeds.setOnClickListener(v -> {
+            feeds.setTextAndValue("Обновить базы фишинга", "загрузка…", true);
+            ThreatData.updateFeeds((count, error) -> {
+                feeds.setTextAndValue("Обновить базы фишинга", ThreatData.feedsInfo(), true);
+                android.widget.Toast.makeText(context, count > 0 ? ("Загружено доменов: " + count) : ("Ошибка: " + error), android.widget.Toast.LENGTH_LONG).show();
+            });
+        });
+        layout.addView(feeds);
+
+        final org.telegram.ui.Cells.TextSettingsCell domains = new org.telegram.ui.Cells.TextSettingsCell(context);
+        domains.setText("Свои списки доменов", true);
+        domains.setOnClickListener(v -> showDomains(context));
+        layout.addView(domains);
+
         final org.telegram.ui.Cells.TextSettingsCell watch = new org.telegram.ui.Cells.TextSettingsCell(context);
         watch.setText("Редактировать список наблюдения", true);
         watch.setOnClickListener(v -> showWatchlist(context));

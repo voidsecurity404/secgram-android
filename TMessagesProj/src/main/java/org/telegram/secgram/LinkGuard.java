@@ -33,6 +33,19 @@ public final class LinkGuard {
         }
         final String url = uri.toString();
         final UrlAnalyzer.UrlReport report = UrlAnalyzer.analyze(url);
+        switch (ThreatData.listed(report.asciiHost)) {
+            case ALLOWED:
+                return false;
+            case BLOCKED:
+                report.add(Finding.Severity.CRITICAL, "Домен " + report.asciiHost + " в вашем чёрном списке.");
+                break;
+            default:
+                break;
+        }
+        final String feed = ThreatData.feedMatch(report.asciiHost);
+        if (feed != null) {
+            report.add(Finding.Severity.CRITICAL, "Адрес есть в базе опасных сайтов " + feed + ".");
+        }
         final boolean strip = SecGramConfig.get(SecGramConfig.STRIP_TRACKING);
         final Uri target = strip && !report.cleanUrl.equals(url) ? Uri.parse(report.cleanUrl) : uri;
         if (!SecGramConfig.linkGuard()
