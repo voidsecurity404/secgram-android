@@ -42,6 +42,9 @@ public final class LinkGuard {
             default:
                 break;
         }
+        if (SecGramConfig.get(SecGramConfig.SCAM_DETECTOR) && SecGramTools.linkFromStranger()) {
+            report.add(Finding.Severity.WARNING, "Ссылка от незнакомца (его нет в ваших контактах). Мошенники начинают переписку именно так.");
+        }
         final String feed = ThreatData.feedMatch(report.asciiHost);
         if (feed != null) {
             report.add(Finding.Severity.CRITICAL, "Адрес есть в базе опасных сайтов " + feed + ".");
@@ -96,12 +99,40 @@ public final class LinkGuard {
             builder.setPositiveButton(dangerous ? "Всё равно открыть" : "Открыть", (dialog, which) -> openBypassed(open, target));
         }
         builder.setNegativeButton("Отмена", null);
-        builder.setNeutralButton("Копировать обезвреженной", (dialog, which) ->
-            AndroidUtilities.addToClipboard(defang(url)));
+        builder.setNeutralButton("Ещё…", (dialog, which) -> showMore(context, report, url));
         final AlertDialog dialog = builder.show();
         if (dangerous && open != null) {
             dialog.redPositive();
         }
+    }
+
+    private static void showMore(Context context, UrlAnalyzer.UrlReport report, String url) {
+        final CharSequence[] items = {
+            "Копировать обезвреженной",
+            "Проверить домен (RDAP) и сертификат — запрос с вашего IP",
+            "Раскрыть перенаправления — запрос с вашего IP",
+        };
+        new AlertDialog.Builder(context)
+            .setTitle("Ссылка")
+            .setItems(items, (d, which) -> {
+                if (which == 0) {
+                    AndroidUtilities.addToClipboard(defang(url));
+                } else if (which == 1 && !TextUtils.isEmpty(report.asciiHost)) {
+                    NetChecks.checkServer(report.asciiHost, result -> showText(context, "Домен и сертификат", result));
+                } else if (which == 2) {
+                    NetChecks.expandRedirects(url, result -> showText(context, "Перенаправления", result));
+                }
+            })
+            .show();
+    }
+
+    private static void showText(Context context, String title, String text) {
+        new AlertDialog.Builder(context)
+            .setTitle(title)
+            .setMessage(text)
+            .setPositiveButton("Закрыть", null)
+            .setNeutralButton("Копировать", (d, w) -> AndroidUtilities.addToClipboard(text))
+            .show();
     }
 
     public static String defang(String url) {

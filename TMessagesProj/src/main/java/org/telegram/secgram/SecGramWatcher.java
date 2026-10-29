@@ -44,6 +44,7 @@ public final class SecGramWatcher implements NotificationCenter.NotificationCent
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; ++a) {
             NotificationCenter.getInstance(a).addObserver(new SecGramWatcher(a), NotificationCenter.didReceiveNewMessages);
         }
+        SecGramTools.startClipboardGuard();
     }
 
     private static SharedPreferences prefs() {
@@ -126,6 +127,7 @@ public final class SecGramWatcher implements NotificationCenter.NotificationCent
             if (object == null || object.isOut() || object.messageOwner == null) {
                 continue;
             }
+            checkAddedToGroup(controller, dialogId, object);
             final String text = object.messageOwner.message == null ? "" : object.messageOwner.message;
             if (text.isEmpty()) {
                 continue;
@@ -143,6 +145,7 @@ public final class SecGramWatcher implements NotificationCenter.NotificationCent
                     }
                 }
             }
+            SecGramTools.collectIocs(dialogId, chat, object);
             if (SecGramConfig.get(SecGramConfig.WATCHLIST)) {
                 final String term = match(text);
                 if (term != null) {
@@ -151,6 +154,26 @@ public final class SecGramWatcher implements NotificationCenter.NotificationCent
                 }
             }
         }
+    }
+
+    // Somebody not in contacts added you to a group: a common start of
+    // spam, phishing and "investment" scams.
+    private void checkAddedToGroup(MessagesController controller, long dialogId, MessageObject object) {
+        final TLRPC.MessageAction action = object.messageOwner.action;
+        if (!SecGramConfig.get(SecGramConfig.SCAM_DETECTOR) || !(action instanceof TLRPC.TL_messageActionChatAddUser)) {
+            return;
+        }
+        final long self = UserConfig.getInstance(account).getClientUserId();
+        if (action.users == null || !action.users.contains(self)) {
+            return;
+        }
+        final long by = object.getFromChatId();
+        final TLRPC.User user = by > 0 ? controller.getUser(by) : null;
+        if (user == null || user.contact || user.self) {
+            return;
+        }
+        final TLRPC.Chat chat = controller.getChat(-dialogId);
+        toast("⚠️ Вас добавил в группу незнакомец\n«" + userName(user) + "» добавил вас в «" + (chat == null ? "?" : chat.title) + "». Так рассылают спам и фишинг — можно выйти и пожаловаться.");
     }
 
     private static String userName(TLRPC.User user) {

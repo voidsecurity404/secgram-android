@@ -41001,6 +41001,7 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void didPressUrl(ChatMessageCell cell, final CharacterStyle url, boolean longPress) {
+            org.telegram.secgram.SecGramTools.rememberLinkMessage(currentAccount, cell.getMessageObject());
             didPressMessageUrl(url, longPress, cell.getMessageObject(), cell);
         }
 

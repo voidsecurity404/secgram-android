@@ -6849,6 +6849,7 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         fromCache = fromCache && user.id / 1000 != 333 && user.id != 777000;
         TLRPC.User oldUser = users.get(user.id);
+        org.telegram.secgram.SecGramTools.trackName(currentAccount, user);
         if (oldUser == user && !force) {
             return false;
         }
@@ -9309,6 +9310,11 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void deleteMessages(ArrayList<Integer> messages, ArrayList<Long> randoms, TLRPC.EncryptedChat encryptedChat, long dialogId, boolean forAll, int mode, boolean cacheOnly, long taskId, TLObject taskRequest, int topicId, boolean movedToScheduled, int movedToScheduledMessageId) {
+        if (forAll && !cacheOnly && taskId == 0 && taskRequest == null && mode == 0 && messages != null && !messages.isEmpty()
+            && org.telegram.secgram.SecGramConfirm.needsRevokeConfirmation()) {
+            org.telegram.secgram.SecGramConfirm.confirmRevoke(messages.size(), () -> deleteMessages(messages, randoms, encryptedChat, dialogId, forAll, mode, cacheOnly, taskId, taskRequest, topicId, movedToScheduled, movedToScheduledMessageId));
+            return;
+        }
         final boolean scheduled = mode == ChatActivity.MODE_SCHEDULED;
         final boolean quickReplies = mode == ChatActivity.MODE_QUICK_REPLIES;
         final boolean welcomeMessages = mode == ChatActivity.MODE_WELCOME_MESSAGES;
@@ -14404,6 +14410,9 @@ public class MessagesController extends BaseController implements NotificationCe
         long dialogId = messageObject.getDialogId();
         getMessagesStorage().markMessagesContentAsRead(dialogId, arrayList, 0, 0);
         getNotificationCenter().postNotificationName(NotificationCenter.messagesReadContent, dialogId, arrayList);
+        if (org.telegram.secgram.SecGramConfig.get(org.telegram.secgram.SecGramConfig.GHOST_MEDIA)) {
+            return; // SecGram: played locally, the sender is not told.
+        }
         if (messageObject.getId() < 0) {
             markMessageAsRead(messageObject.getDialogId(), messageObject.messageOwner.random_id, Integer.MIN_VALUE);
         } else {
@@ -14556,7 +14565,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     private void completeReadTask(ReadTask task) {
-        if (org.telegram.secgram.SecGramConfig.ghostRead()) {
+        if (org.telegram.secgram.SecGramConfig.ghostRead() || org.telegram.secgram.SecGramTools.ghostChat(task.dialogId)) {
             return; // SecGram ghost mode: the sender never sees the read mark.
         }
         if (task.replyId != 0 && task.monoForumPeerId == 0) {

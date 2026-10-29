@@ -26,6 +26,15 @@ public final class SecGramConfig {
     public static final String STRIP_METADATA = "strip_metadata";
     public static final String WATCHLIST = "watchlist_enabled";
     public static final String LOGIN_CODE_GUARD = "login_code_guard";
+    public static final String NAME_HISTORY = "name_history";
+    public static final String CLIPBOARD_GUARD = "clipboard_guard";
+    public static final String GHOST_MEDIA = "ghost_media";
+    public static final String NO_LINK_PREVIEWS = "no_link_previews";
+    public static final String HIDE_PHONE = "hide_phone";
+    public static final String SHOW_SECONDS = "show_seconds";
+    public static final String CONFIRM_REVOKE = "confirm_revoke";
+    public static final String BLOCK_EXECUTABLES = "block_executables";
+    public static final String NO_RISKY_AUTODOWNLOAD = "no_risky_autodownload";
 
     private SecGramConfig() {
     }
@@ -47,6 +56,10 @@ public final class SecGramConfig {
             case STRIP_METADATA:
             case WATCHLIST:
             case LOGIN_CODE_GUARD:
+            case NAME_HISTORY:
+            case CLIPBOARD_GUARD:
+            case CONFIRM_REVOKE:
+            case NO_RISKY_AUTODOWNLOAD:
                 return true;
             default:
                 return false;

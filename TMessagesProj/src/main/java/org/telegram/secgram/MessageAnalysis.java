@@ -150,6 +150,20 @@ public final class MessageAnalysis {
         final TLRPC.User sender = fromId > 0 ? controller.getUser(fromId) : null;
         final boolean stranger = sender != null && !sender.contact && !sender.self && !sender.bot && dialogId > 0;
         final Finding.Report risk = senderRisk(sender, fromId);
+        final String impersonated = SecGramTools.impersonatedContact(account, sender);
+        if (impersonated != null) {
+            risk.add(Finding.Severity.HIGH, "Имя совпадает с вашим контактом «" + impersonated + "», но это ДРУГОЙ аккаунт (ID " + fromId + "). Классическая подмена знакомого.");
+        }
+        if (fromId != 0) {
+            final String history = SecGramTools.nameHistory(account, fromId);
+            if (!history.isEmpty()) {
+                text.append("\nИстория имён отправителя:\n").append(history);
+            }
+            final String note = SecGramTools.note(account, fromId);
+            if (!note.isEmpty()) {
+                text.append("\n📝 Ваша заметка: ").append(note).append('\n');
+            }
+        }
         if (!risk.findings.isEmpty()) {
             text.append("\nОтправитель: ").append(risk.verdict()).append('\n');
             for (Finding f : risk.findings) {
@@ -194,16 +208,100 @@ public final class MessageAnalysis {
             text.append("\nДекодирование:\n").append(decoded);
         }
 
+        final java.io.File local = org.telegram.messenger.FileLoader.getInstance(account).getPathToMessage(message);
+        if (object.getDocument() != null && local != null && local.exists() && local.length() <= 64L * 1024 * 1024) {
+            try (java.io.InputStream in = new java.io.FileInputStream(local)) {
+                final byte[] data = new byte[(int) local.length()];
+                int read = 0;
+                while (read < data.length) {
+                    final int n = in.read(data, read, data.length - read);
+                    if (n <= 0) {
+                        break;
+                    }
+                    read += n;
+                }
+                final ContainerAnalyzer.Result container = ContainerAnalyzer.analyze(data);
+                if (!container.findings.isEmpty() || !container.summary.isEmpty()) {
+                    text.append("\nСодержимое файла: ").append(container.verdict()).append('\n');
+                    for (Finding f : container.findings) {
+                        text.append(f.severity.mark).append(' ').append(f.text).append('\n');
+                    }
+                    if (!container.summary.isEmpty()) {
+                        text.append(container.summary.length() > 1200 ? container.summary.substring(0, 1200) + "…" : container.summary).append('\n');
+                    }
+                }
+            } catch (Throwable ignore) {
+            }
+        }
+
         final String all = text.toString();
-        final String iocsOnly = iocText.toString();
-        final AlertDialog.Builder builder = new AlertDialog.Builder(activity)
+        new AlertDialog.Builder(activity)
             .setTitle("SecGram: анализ")
             .setMessage(all)
             .setPositiveButton("Закрыть", null)
-            .setNeutralButton("Копировать", (d, w) -> AndroidUtilities.addToClipboard(all));
-        if (!iocsOnly.isEmpty()) {
-            builder.setNegativeButton("Копировать IOC", (d, w) -> AndroidUtilities.addToClipboard(iocsOnly));
+            .setNegativeButton("Копировать", (d, w) -> AndroidUtilities.addToClipboard(all))
+            .setNeutralButton("Ещё…", (d, w) -> showActions(activity, account, object, iocs, iocText.toString(), local))
+            .show();
+    }
+
+    private static void showActions(Activity activity, int account, MessageObject object, List<IocExtractor.Ioc> iocs, String iocsText, java.io.File local) {
+        final long dialogId = object.getDialogId();
+        final long fromId = object.getFromChatId();
+        final boolean ghost = SecGramTools.ghostChat(dialogId);
+        final boolean collect = SecGramTools.collectChat(dialogId);
+        final boolean hasFile = local != null && local.exists();
+        final java.util.ArrayList<CharSequence> items = new java.util.ArrayList<>();
+        final java.util.ArrayList<Runnable> actions = new java.util.ArrayList<>();
+        if (!iocs.isEmpty()) {
+            items.add("Копировать IOC (обезвреженные)");
+            actions.add(() -> AndroidUtilities.addToClipboard(iocsText));
+            items.add("Проверить IOC: VirusTotal, AbuseIPDB, Shodan…");
+            actions.add(() -> SecGramTools.showLookups(activity, iocs));
+            items.add("Экспорт IOC: JSON / CSV / STIX / MISP / TheHive");
+            actions.add(() -> SecGramTools.exportIocs(activity, iocs));
         }
-        builder.show();
+        if (hasFile) {
+            items.add("Хеши файла и VirusTotal");
+            actions.add(() -> org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+                final String[] hashes = SecGramTools.fileHashes(local);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (hashes == null) {
+                        return;
+                    }
+                    final String value = "SHA-256: " + hashes[0] + "\nSHA-1: " + hashes[1] + "\nMD5: " + hashes[2];
+                    new AlertDialog.Builder(activity)
+                        .setTitle("Хеши файла")
+                        .setMessage(value + "\n\nVirusTotal ищет по хешу — сам файл никуда не отправляется.")
+                        .setPositiveButton("VirusTotal", (d, w) -> org.telegram.messenger.browser.Browser.openUrl(activity, "https://www.virustotal.com/gui/file/" + hashes[0]))
+                        .setNegativeButton("Копировать", (d, w) -> AndroidUtilities.addToClipboard(value))
+                        .show();
+                });
+            }));
+        }
+        items.add("Экспорт доказательств (ZIP с SHA-256)");
+        actions.add(() -> SecGramTools.exportEvidence(activity, account, object));
+        if (fromId != 0) {
+            items.add("Заметка об отправителе");
+            actions.add(() -> SecGramTools.showNoteEditor(activity, account, fromId, String.valueOf(fromId)));
+        }
+        items.add(ghost ? "Выключить ghost-режим в этом чате" : "Ghost-режим в этом чате (не отмечать прочитанным)");
+        actions.add(() -> {
+            SecGramTools.setGhostChat(dialogId, !ghost);
+            android.widget.Toast.makeText(activity, ghost ? "Ghost-режим в чате выключен" : "Собеседник не увидит прочтения в этом чате", android.widget.Toast.LENGTH_SHORT).show();
+        });
+        items.add(collect ? "Не собирать IOC из этого чата" : "Собирать IOC из этого чата в CSV");
+        actions.add(() -> {
+            SecGramTools.setCollectChat(dialogId, !collect);
+            android.widget.Toast.makeText(activity, collect ? "Сбор IOC остановлен" : "Новые индикаторы пишутся в " + SecGramTools.iocFeedFile().getAbsolutePath(), android.widget.Toast.LENGTH_LONG).show();
+        });
+        items.add("Поиск regex в этом чате");
+        actions.add(() -> SecGramTools.showRegexSearch(activity, account, dialogId));
+        items.add("Шаблоны ответов");
+        actions.add(() -> SecGramTools.showTemplates(activity));
+        new AlertDialog.Builder(activity)
+            .setTitle("SecGram")
+            .setItems(items.toArray(new CharSequence[0]), (d, which) -> actions.get(which).run())
+            .setNegativeButton("Отмена", null)
+            .show();
     }
 }

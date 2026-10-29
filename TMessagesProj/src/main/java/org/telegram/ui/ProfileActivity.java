@@ -13550,6 +13550,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                             phoneNumber = vcardPhone;
                         } else if (user != null && !TextUtils.isEmpty(user.phone)) {
                             text = PhoneFormat.getInstance().format("+" + user.phone);
+                            if (user.self) {
+                                text = org.telegram.secgram.SecGramConfirm.maskPhone(text);
+                            }
                             phoneNumber = user.phone;
                         } else {
                             text = LocaleController.getString(R.string.PhoneHidden);
@@ -13643,7 +13646,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         TLRPC.User user = UserConfig.getInstance(currentAccount).getCurrentUser();
                         String value;
                         if (user != null && user.phone != null && user.phone.length() != 0) {
-                            value = PhoneFormat.getInstance().format("+" + user.phone);
+                            value = org.telegram.secgram.SecGramConfirm.maskPhone(PhoneFormat.getInstance().format("+" + user.phone));
                         } else {
                             value = LocaleController.getString(R.string.NumberUnknown);
                         }

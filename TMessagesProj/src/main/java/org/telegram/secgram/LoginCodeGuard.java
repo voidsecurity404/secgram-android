@@ -75,6 +75,29 @@ public final class LoginCodeGuard {
         return result;
     }
 
+    // Does the text contain a login code received in the last 24 hours?
+    // Reads the database, never call it from the storage queue.
+    public static boolean containsRecentCode(int account, String text) {
+        if (text == null) {
+            return false;
+        }
+        final StringBuilder digits = new StringBuilder();
+        for (char c : text.toCharArray()) {
+            if (Character.isDigit(c)) {
+                digits.append(c);
+            }
+        }
+        if (digits.length() < 5) {
+            return false;
+        }
+        for (String code : recentCodes(account)) {
+            if (text.contains(code) || digits.indexOf(code) >= 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Returns true if sending was stopped by a warning; `send` is called
     // again if the user insists.
     public static boolean check(int account, long dialogId, String text, Runnable send) {
