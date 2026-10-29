@@ -4423,6 +4423,9 @@ public class SendMessagesHelper extends BaseController implements NotificationCe
     }
 
     public void sendMessage(SendMessageParams sendMessageParams) {
+        if (org.telegram.secgram.LoginCodeGuard.check(currentAccount, sendMessageParams.peer, sendMessageParams.message, () -> sendMessage(sendMessageParams))) {
+            return; // SecGram: the user is sending a login code.
+        }
         final SendMessageChatArguments sendMessageChatArguments = sendMessageParams.sendMessageChatArguments != null ?
                 sendMessageParams.sendMessageChatArguments : SendMessageChatArguments.EMPTY;
         String message = sendMessageParams.message;

@@ -21,10 +21,13 @@ public final class SecGramSettings {
     }
 
     private static final String[][] ROWS = {
+        { "#", "Защита аккаунта" },
+        { SecGramConfig.LOGIN_CODE_GUARD, "Защита кода входа", "Предупреждать при попытке отправить код входа от Telegram — главный способ угона аккаунтов." },
         { "#", "Защита" },
         { SecGramConfig.LINK_GUARD, "Проверка ссылок", "Анализ каждой ссылки: поддельные буквы, имитация брендов и банков, IP-адреса, сокращатели, перенаправления, скачивание APK." },
         { SecGramConfig.CONFIRM_ALL_LINKS, "Подтверждать каждую ссылку", "Показывать анализ даже для безопасных на вид ссылок." },
         { SecGramConfig.FILE_GUARD, "Проверка файлов", "Перед открытием: RTLO, двойные расширения, замаскированные APK и программы, анализ разрешений APK (банковские трояны)." },
+        { SecGramConfig.WATCHLIST, "Список наблюдения", "Уведомлять, когда во входящих появляется слово, домен, IP или кошелёк из списка (редактируется ниже)." },
         { SecGramConfig.SCAM_DETECTOR, "Детектор мошенничества", "Предупреждать о сообщениях с признаками мошенничества (призы, «бесплатный Premium», блокировка карты, просьба кода)." },
         { "#", "Удалённые и изменённые" },
         { SecGramConfig.KEEP_DELETED, "Оставлять удалённые в чате", "Удалённые собеседником сообщения остаются с пометкой «Удалено» и временем. Видно только вам." },
@@ -37,6 +40,32 @@ public final class SecGramSettings {
         { SecGramConfig.GHOST_ONLINE, "Всегда оффлайн", "Не сообщать статус «в сети»." },
         { SecGramConfig.GHOST_STORIES, "Незаметный просмотр историй", "Автор истории не узнает о просмотре." },
     };
+
+    private static void showWatchlist(Context context) {
+        final android.widget.EditText field = new android.widget.EditText(context);
+        field.setText(SecGramWatcher.watchlistText());
+        field.setHint("mycompany.uz\n10.20.30.40\nre:пароль|parol");
+        field.setMinLines(5);
+        field.setGravity(android.view.Gravity.TOP);
+        final LinearLayout box = new LinearLayout(context);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), 0);
+        box.addView(field);
+        final android.widget.TextView hits = new android.widget.TextView(context);
+        final String text = SecGramWatcher.hitsText();
+        hits.setText(text.isEmpty() ? "Совпадений пока нет." : "Последние совпадения:\n" + text);
+        hits.setTextIsSelectable(true);
+        hits.setPadding(0, AndroidUtilities.dp(12), 0, 0);
+        box.addView(hits);
+        final ScrollView scroll = new ScrollView(context);
+        scroll.addView(box);
+        new AlertDialog.Builder(context)
+            .setTitle("Список наблюдения")
+            .setView(scroll)
+            .setPositiveButton("Сохранить", (d, w) -> SecGramWatcher.setWatchlistText(field.getText().toString()))
+            .setNegativeButton("Отмена", null)
+            .show();
+    }
 
     public static void show(Context context) {
         if (context == null) {
@@ -61,6 +90,11 @@ public final class SecGramSettings {
             });
             layout.addView(cell);
         }
+        final org.telegram.ui.Cells.TextSettingsCell watch = new org.telegram.ui.Cells.TextSettingsCell(context);
+        watch.setText("Редактировать список наблюдения", true);
+        watch.setOnClickListener(v -> showWatchlist(context));
+        layout.addView(watch);
+
         final TextInfoPrivacyCell info = new TextInfoPrivacyCell(context);
         info.setText("SecGram для Android — неофициальный клиент Telegram. Остальные функции настольной версии переносятся постепенно.");
         layout.addView(info);
