@@ -62,6 +62,14 @@ public final class FileGuard {
         return (c >= 0x202A && c <= 0x202E) || (c >= 0x2066 && c <= 0x2069) || c == 0x200E || c == 0x200F || c == 0x061C;
     }
 
+    // Autodownload must never fetch programs, scripts or disguised files.
+    public static boolean riskyForAutodownload(String name) {
+        if (name == null || !SecGramConfig.get(SecGramConfig.NO_RISKY_AUTODOWNLOAD)) {
+            return false;
+        }
+        return analyzeName(name).atLeast(Finding.Severity.HIGH);
+    }
+
     public static Finding.Report analyzeName(String name) {
         final Finding.Report result = new Finding.Report();
         if (name == null) {
@@ -254,8 +262,28 @@ public final class FileGuard {
         if (isApk) {
             final Finding.Report apk = analyzeApk(file, summary);
             report.findings.addAll(apk.findings);
+        } else if (file.length() <= 64L * 1024 * 1024) {
+            try (InputStream in = new java.io.FileInputStream(file)) {
+                final byte[] data = new byte[(int) file.length()];
+                int read = 0;
+                while (read < data.length) {
+                    final int n = in.read(data, read, data.length - read);
+                    if (n <= 0) {
+                        break;
+                    }
+                    read += n;
+                }
+                final ContainerAnalyzer.Result container = ContainerAnalyzer.analyze(data);
+                report.findings.addAll(container.findings);
+                if (!container.summary.isEmpty()) {
+                    summary.append(container.summary.length() > 1500 ? container.summary.substring(0, 1500) + "…" : container.summary);
+                }
+            } catch (Throwable ignore) {
+            }
         }
-        if (!report.atLeast(Finding.Severity.HIGH)) {
+        final boolean blocked = SecGramConfig.get(SecGramConfig.BLOCK_EXECUTABLES)
+            && EXECUTABLE.contains(name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT));
+        if (!report.atLeast(Finding.Severity.HIGH) && !blocked) {
             return false;
         }
         final StringBuilder text = new StringBuilder();
@@ -266,21 +294,20 @@ public final class FileGuard {
         if (summary.length() > 0) {
             text.append("\n\n").append(summary);
         }
-        text.append("\n\nОткрывайте, только если доверяете отправителю и ждали именно этот файл.");
-        final AlertDialog dialog = new AlertDialog.Builder(activity)
+        text.append(blocked
+            ? "\n\nЗапуск программ из чатов запрещён в настройках SecGram."
+            : "\n\nОткрывайте, только если доверяете отправителю и ждали именно этот файл.");
+        final AlertDialog.Builder builder = new AlertDialog.Builder(activity)
             .setTitle("Опасный файл")
             .setMessage(text)
-            .setNegativeButton("Отмена", null)
-            .setPositiveButton("Всё равно открыть", (d, w) -> {
-                bypass = true;
-                try {
-                    open.run();
-                } finally {
-                    bypass = false;
-                }
-            })
-            .show();
-        dialog.redPositive();
+            .setNegativeButton("Отмена", null);
+        if (!blocked) {
+            builder.setPositiveButton("Всё равно открыть", (d, w) -> runTrusted(open));
+        }
+        final AlertDialog dialog = builder.show();
+        if (!blocked) {
+            dialog.redPositive();
+        }
         return true;
     }
 }

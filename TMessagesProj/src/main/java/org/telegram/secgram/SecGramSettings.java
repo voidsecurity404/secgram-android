@@ -23,9 +23,13 @@ public final class SecGramSettings {
     private static final String[][] ROWS = {
         { "#", "Защита аккаунта" },
         { SecGramConfig.LOGIN_CODE_GUARD, "Защита кода входа", "Предупреждать при попытке отправить код входа от Telegram — главный способ угона аккаунтов." },
+        { SecGramConfig.CLIPBOARD_GUARD, "Очищать буфер от кода входа", "Скопированный код входа удаляется из буфера обмена через 30 секунд." },
+        { SecGramConfig.CONFIRM_REVOKE, "Подтверждать удаление у всех", "Дополнительный вопрос перед удалением сообщений у собеседника." },
         { "#", "Защита" },
         { SecGramConfig.LINK_GUARD, "Проверка ссылок", "Анализ каждой ссылки: поддельные буквы, имитация брендов и банков, IP-адреса, сокращатели, перенаправления, скачивание APK." },
         { SecGramConfig.CONFIRM_ALL_LINKS, "Подтверждать каждую ссылку", "Показывать анализ даже для безопасных на вид ссылок." },
+        { SecGramConfig.BLOCK_EXECUTABLES, "Запретить открытие программ", "APK, EXE, скрипты и другие программы из чатов нельзя открыть." },
+        { SecGramConfig.NO_RISKY_AUTODOWNLOAD, "Не скачивать опасное автоматически", "Автозагрузка пропускает программы, скрипты, макросы и замаскированные файлы." },
         { SecGramConfig.FILE_GUARD, "Проверка файлов", "Перед открытием: RTLO, двойные расширения, замаскированные APK и программы, анализ разрешений APK (банковские трояны)." },
         { SecGramConfig.WATCHLIST, "Список наблюдения", "Уведомлять, когда во входящих появляется слово, домен, IP или кошелёк из списка (редактируется ниже)." },
         { SecGramConfig.SCAM_DETECTOR, "Детектор мошенничества", "Предупреждать о сообщениях с признаками мошенничества (призы, «бесплатный Premium», блокировка карты, просьба кода)." },
@@ -39,6 +43,12 @@ public final class SecGramSettings {
         { SecGramConfig.GHOST_TYPING, "Скрывать «печатает…»", "Не отправлять статусы набора, записи и загрузки." },
         { SecGramConfig.GHOST_ONLINE, "Всегда оффлайн", "Не сообщать статус «в сети»." },
         { SecGramConfig.GHOST_STORIES, "Незаметный просмотр историй", "Автор истории не узнает о просмотре." },
+        { SecGramConfig.GHOST_MEDIA, "Не отмечать голосовые прослушанными", "Собеседник не увидит, что вы прослушали голосовое или видеосообщение." },
+        { SecGramConfig.NO_LINK_PREVIEWS, "Отправлять ссылки без превью", "К вашим ссылкам не прикрепляется превью сайта." },
+        { SecGramConfig.HIDE_PHONE, "Скрывать свой номер на экране", "Номер в настройках и профиле маскируется — для демонстрации экрана." },
+        { "#", "Расследования и удобство" },
+        { SecGramConfig.NAME_HISTORY, "История имён", "Запоминать прежние имена и юзернеймы — видно в «SecGram: анализ»." },
+        { SecGramConfig.SHOW_SECONDS, "Время с секундами", "Показывать время сообщений с секундами (12:34:56)." },
     };
 
     private static void showDomains(Context context) {
@@ -111,6 +121,33 @@ public final class SecGramSettings {
             });
             layout.addView(cell);
         }
+        final android.app.Activity activity = context instanceof android.app.Activity ? (android.app.Activity) context : null;
+        final String[][] buttons = {
+            { "audit", "Аудит безопасности аккаунта" },
+            { "templates", "Шаблоны ответов" },
+            { "team_export", "Экспорт настроек для команды" },
+            { "team_import", "Импорт настроек команды (из буфера)" },
+            { "ioc_feed", "Поделиться собранными IOC (CSV)" },
+        };
+        int insertAt = 0;
+        for (String[] button : buttons) {
+            final org.telegram.ui.Cells.TextSettingsCell cell = new org.telegram.ui.Cells.TextSettingsCell(context);
+            cell.setText(button[1], true);
+            cell.setOnClickListener(v -> {
+                if (activity == null) {
+                    return;
+                }
+                switch (button[0]) {
+                    case "audit": SecGramTools.showSecurityAudit(activity, org.telegram.messenger.UserConfig.selectedAccount); break;
+                    case "templates": SecGramTools.showTemplates(activity); break;
+                    case "team_export": SecGramTools.exportTeam(activity); break;
+                    case "team_import": SecGramTools.importTeamFromClipboard(activity); break;
+                    case "ioc_feed": SecGramTools.shareIocFeed(activity); break;
+                }
+            });
+            layout.addView(cell, insertAt++);
+        }
+
         final org.telegram.ui.Cells.TextSettingsCell update = new org.telegram.ui.Cells.TextSettingsCell(context);
         update.setTextAndValue("Проверить обновления", "версия " + SecGramUpdater.currentVersion(), true);
         update.setOnClickListener(v -> {

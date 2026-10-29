@@ -862,6 +862,10 @@ public class DownloadController extends BaseController implements NotificationCe
         if (message == null || message.media instanceof TLRPC.TL_messageMediaStory) {
             return canPreloadStories() ? 2 : 0;
         }
+        if (message.media != null && message.media.document != null
+            && org.telegram.secgram.FileGuard.riskyForAutodownload(FileLoader.getDocumentFileName(message.media.document))) {
+            return 0; // SecGram: never autodownload programs and disguised files.
+        }
         int type;
         boolean isVideo;
         if ((isVideo = MessageObject.isVideoMessage(message)) || MessageObject.isGifMessage(message) || MessageObject.isRoundVideoMessage(message) || MessageObject.isGameMessage(message)) {
